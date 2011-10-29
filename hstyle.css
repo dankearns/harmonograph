@@ -1,0 +1,28 @@
+body {
+    background-color: #000000;
+}
+table {
+    background-color: #ffffff;
+    padding: 5px;
+}
+#controls {
+    width: 250px;
+    float: right;
+}
+td {
+    padding: 3px;
+}
+.header {
+    background-color: #44bbcc;
+    font-weight: bold;
+}
+.bdiv {
+    text-align: center;
+}
+button {
+    font-size: 1.1em;
+}
+.ex:hover {
+    background-color: #999966;
+    color: #ffffff;
+}

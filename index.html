@@ -1,0 +1,131 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html> <head>
+<title>Harmonograph Unleashed</title>
+<link rel="stylesheet" href="hstyle.css" type="text/css"/>
+<script type="text/javascript" src="/lib.js"></script>
+<script>
+
+var ren = require('./renderer');
+var _ = require('underscore');
+
+window.onload = function() {
+ var canvas = document.getElementById('harmonograph');
+  ren.draw(canvas, document);
+
+  document.getElementById('Go').onclick = function() {
+    ren.draw(canvas, document);
+  };
+
+  document.getElementById('More').onclick = function() {
+    ren.drawMore(canvas, document);
+  };
+
+  document.getElementById('Over').onclick = function() {
+    ren.draw(canvas, document, true);
+  };
+
+  document.getElementById('Clear').onclick = function() {
+    ren.clear(canvas);
+  };
+
+ _.each(["A","B","C","D","E","F","G","X"], function(id) {
+    var e = document.getElementById('def_' + id);
+    e.onclick = function() {
+      if("G" === id) {
+        var cfg = ren.defaults[id];
+        ren.draw(canvas, document, false, cfg);
+      }
+      ren.loadDefault(id,document);
+    };
+ });
+
+}
+</script>
+</head>
+
+<body>
+
+<div id="controls">
+  <form onSubmit="return false;">
+  <table id="ctrls" width="200" border="0">
+
+    <tr><td colspan="2">
+      <span class="ex" id="def_X">Defaults:</span>
+      <span class="ex" id="def_A">A</span>
+      <span class="ex" id="def_B">B</span>
+      <span class="ex" id="def_C">C</span>
+      <span class="ex" id="def_D">D</span>
+      <span class="ex" id="def_E">E</span>
+      <span class="ex" id="def_F">F</span>
+      <span class="ex" id="def_G">G</span>
+</td></tr>
+    <tr><td class="header" colspan="2">Term X1</td></tr>
+    <tr><td><label for="f_1">Frequency</label></td>
+    <td><input name="f_1" id="f_1" type="text" size="5" value="4.001"></td></tr>
+    <tr><td><label for="p_1">Phase</label></td>
+    <td><input name="p_1" id="p_1" type="text" size="5" value="0"></td></tr>
+<!--
+   <tr><td><label for="a_1">Amplitude</label></td>
+    <td><input name="a_1" id="a_1" type="text" size="5" value="1"></td></tr>
+ -->
+   <tr><td><label for="d_1">Damping</label></td>    
+    <td><input name="d_1" id="d_1" type="text" size="5" value=".0001"></td></tr>
+
+    <tr><td class="header" colspan="2">Term X2</td></tr>
+    <tr><td><label for="f_2">Frequency</label></td>    
+    <td><input name="f_2" id="f_2" type="text" size="5" value="3.001"></td></tr>
+    <tr><td><label for="p_2">Phase</label></td>    
+    <td><input name="p_2" id="p_2" type="text" size="5" value="0"></td></tr>
+<!--
+    <tr><td><label for="a_2">Amplitude</label></td>    
+    <td><input name="a_2" id="a_2" type="text" size="5" value="1"></td></tr>
+ -->
+    <tr><td><label for="d_2">Damping</label></td>    
+    <td><input name="d_2" id="d_2" type="text" size="5" value=".0001"></td></tr>
+
+    <tr><td class="header" colspan="2">Term Y1</td></tr>
+    <tr><td><label for="f_3">Frequency</label></td>    
+    <td><input name="f_3" id="f_3" type="text" size="5" value="3.02"></td></tr>
+    <tr><td><label for="p_3">Phase</label></td>    
+    <td><input name="p_3" id="p_3" type="text" size="5" value="1.57"></td></tr>
+<!--
+    <tr><td><label for="a_3">Amplitude</label></td>    
+    <td><input name="a_3" id="a_3" type="text" size="5" value="1"></td></tr>
+ -->
+    <tr><td><label for="d_3">Damping</label></td>    
+    <td><input name="d_3" id="d_3" type="text" size="5" value=".0001"></td></tr>
+
+    <tr><td class="header" colspan="2">Term Y2</td></tr>
+    <tr><td><label for="f_4">Frequency</label></td>    
+    <td><input name="f_4" id="f_4" type="text" size="5" value="2"></td></tr>
+    <tr><td><label for="p_4">Phase</label></td>    
+    <td><input name="p_4" id="p_4" type="text" size="5" value="1.57"></td></tr>
+<!--
+    <tr><td><label for="a_4">Amplitude</label></td>    
+    <td><input name="a_4" id="a_4" type="text" size="5" value="1"></td></tr>
+ -->
+    <tr><td><label for="d_4">Damping</label></td>    
+    <td><input name="d_4" id="d_4" type="text" size="5" value=".0001"></td></tr>
+
+    <tr><td class="header" colspan="2">General</td></tr>
+    <tr><td><label for="tscale">Time Scale</label></td>    
+    <td><input name="tscale" id="tscale" type="text" size="5" value=".003"></td></tr>
+
+    <tr><td class="header" colspan="2">
+      <div class="bdiv">
+        <button id="Clear" name="Clear">Clear</button>
+        <button id="Go" name="Go">Draw</button>
+        <button id="Over" name="Over">Over</button>
+        <button id="More" name="More">More</button>
+     </div>
+  </td></tr>
+  </table>
+  </form>
+</div>
+
+<div id="hg">
+  <canvas id="harmonograph" width="1000", height="750"></canvas>
+</div>
+
+</body> </html>
+
