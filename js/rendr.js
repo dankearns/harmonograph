@@ -55,7 +55,7 @@ function graphConfig(doc) {
 }
 
 function clear(canvas) {
-    if(g)
+    if(g && !onTop)
         g.stop();
     _ctx = canvas.getContext('2d');
     _ctx.clearRect(0,0,xs,ys);
@@ -89,9 +89,7 @@ function drawMore(canvas, doc) {
 }
 
 function startDrawing(ctx, g) {
-    xs = _canvas.width;
-    ys = _canvas.height;
-    console.log("scale: " + xs + ", " + ys);
+    var first = true;
     ctx.lineWidth = lwidth;
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
@@ -111,7 +109,6 @@ function startDrawing(ctx, g) {
     var i = -1;
     var closed = true;
     var clr = _newcolor;
-
     var p = function(err, pt) {
         if(clr !== _newcolor) {
             clr = _newcolor;
@@ -295,25 +292,9 @@ function changeColor() {
     }
 };
 
-var zoomed = false;
-function zoom(canvas, doc) {
-    var ctx = canvas.getContext('2d');
-    if(!zoomed) {
-        ctx.save();
-        //ctx.translate(300,300);
-        //ctx.scale(2,2);
-        ctx.rotate(45);
-        zoomed = true;
-    } else {
-        ctx.restore();
-        zoomed = false;
-    }
-};
-
 exports.draw = draw;
 exports.drawMore = drawMore;
 exports.clear = clear;
 exports.loadDefault = loadDefault;
 exports.defaults = defaults;
 exports.changeColor = changeColor;
-exports.zoom = zoom;

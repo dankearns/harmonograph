@@ -9,18 +9,41 @@ var ren = require('./renderer');
 var _ = require('underscore');
 
 window.onload = function() {
- var canvas = document.getElementById('harmonograph');
-  ren.draw(canvas, document);
+  window.requestAnimFrame = (function() {
+    return window.requestAnimationFrame       ||
+           window.webkitRequestAnimationFrame ||
+           window.mozRequestAnimationFrame    ||
+           window.oRequestAnimationFrame      ||
+           window.msRequestAnimationFrame     ||
+           function(cb, elem) {
+             window.setTimeout(cb, 1000/60);
+           };
+  })();
+
+  var df = function() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  var canvas = document.getElementById('harmonograph');
+
+  df(); ren.draw(canvas, document);
+
+  canvas.onclick = function() {
+   ren.changeColor();
+  };
 
   document.getElementById('Go').onclick = function() {
-    ren.draw(canvas, document);
+    df();
+   ren.draw(canvas, document);
   };
 
   document.getElementById('More').onclick = function() {
     ren.drawMore(canvas, document);
   };
 
+  var zoomed = false;
   document.getElementById('Over').onclick = function() {
+    df();
     ren.draw(canvas, document, true);
   };
 
@@ -28,11 +51,24 @@ window.onload = function() {
     ren.clear(canvas);
   };
 
+  var hidden = false;
+  var tb = document.getElementById('ctrls');
+  document.getElementById('hide').onclick = function() {
+    if(hidden) {
+      tb.style.visibility = 'visible';
+    }
+    else {
+      tb.style.visibility = 'hidden';
+    }
+    hidden = !hidden;
+};
+
  _.each(["A","B","C","D","E","F","G","X"], function(id) {
     var e = document.getElementById('def_' + id);
     e.onclick = function() {
       if("G" === id) {
         var cfg = ren.defaults[id];
+        df();
         ren.draw(canvas, document, false, cfg);
       }
       ren.loadDefault(id,document);
@@ -46,6 +82,7 @@ window.onload = function() {
 <body>
 
 <div id="controls">
+  <span class="toggle" id="hide">X</span>
   <form onSubmit="return false;">
   <table id="ctrls" width="200" border="0">
 

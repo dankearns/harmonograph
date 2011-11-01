@@ -114,17 +114,23 @@ Harmonograph.prototype.restart = function(cb) {
     this.run(cb);
 };
 
-Harmonograph.prototype.run = function(cb) {
-    while(!this.isDone())
+Harmonograph.prototype.run = function(cb,count) {
+    var cnt = count ? count : this.maxCount + 1;
+    var i = -1;
+    while(!this.isDone()) {
         cb(null,this.increment());
+        if(++i === cnt) {
+            cb(true);
+            return;
+        }            
+    }
     cb("done");
 };
 
-Harmonograph.prototype.increment = function() {
+Harmonograph.prototype.increment = function(tstep) {
     var t = this.count++;
     var x = this.posX(t*this.step);
     var y = this.posY(t*this.step);
-//    console.log("p: " + x + "," + y);
     this.lastpos = this.curpos;
     this.curpos = [x,y];
     return this.curpos;
