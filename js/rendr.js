@@ -309,11 +309,11 @@ var tableConfig = function(l, w, h, x, y, xa, xp, ya, yp, ra, rp) {
         mode: HARM,
         step: .005,
         xterms: [
-            { frequency: xf, damping: 0.0005, phase: xp, amplitude: xa },
-            { frequency: rf, damping: 0.0005, phase: rp, amplitude: ra },
+            { frequency: xf, damping: 0.0001, phase: xp, amplitude: xa },
+            { frequency: rf, damping: 0.0001, phase: rp, amplitude: ra },
         ],
         yterms: [
-            { frequency: yf, damping: 0.0005, phase: yp, amplitude: ya },
+            { frequency: yf, damping: 0.0001, phase: yp, amplitude: ya },
         ],
     };
     return cfg;
