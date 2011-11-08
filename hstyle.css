@@ -34,11 +34,25 @@ button {
     position: absolute;
     right: 0px;
 }
-#harmonograph {
+.draw {
     width: 100%;
     height: 100%;
     position:absolute;
     top: 0;
     left: 0;
     z-index: 50;
+}
+.blit {
+    width: 100%;
+    height: 100%;
+    position:absolute;
+    top: 0;
+    left: 0;
+    display: none;
+}
+.bc {
+  width: 75px;
+  margin-left: 5px;
+  margin-right: 5px;
+  padding: 3px;
 }

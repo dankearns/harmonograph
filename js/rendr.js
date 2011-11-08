@@ -1,300 +1,347 @@
-var Harmonograph = require('./hgraph').Harmonograph;
+var hg = require('./hgraph');
+var Harmonograph = hg.Harmonograph;
+var HARM = hg.HARM;
+
 var _ = require('underscore');
-var xs = 1000;
-var ys = 750;
-var lwidth = 3;
+var lwidth = 3; // line width for the pen
+var twidth = 4; // line width for the 'table'
+var toffset = 4; // edge offset for the table rect
 
-var g = null;
-var _canvas = null;
-var _ctx = null;
-
-var color= [68,187,204];
-var _newcolor = rotColor();
-var mo = 1;
-
-function rotColor() {
-    var cstr = 'rgb(' + color[0] + ',' + color[1] + ',' + color[2] + ')';
-    var c1 = (color[0] + 19) % 255;
-    var c2 = (color[1] + 27) % 255;
-    var c3 = (color[2] + 47) % 255;
-    var mod = 0;
-
-    if(c1 + c2 + c3 < 180)
-        c3 = Math.floor(Math.random()*155) + 100;
-    
-    color = [ c1 < mod ? mod : c1,
-              c2 < mod ? mod: c2,
-              c3 < mod ? mod : c3];
-    return cstr;
-}
-
-
-function graphConfig(doc) {
-    var terms = _.map([1,2,3,4], function(i) {
-        var f = doc.getElementById("f_" + i);
-        var p = doc.getElementById("p_" + i);
-        var a = doc.getElementById("a_" + i);
-        var d = doc.getElementById("d_" + i);
-        return {
-            frequency: f ? f.value : Math.PI,
-            phase: p ? p.value : 0,
-            amplitude: a ? a.value : 1,
-            damping: d ? d.value : .01
-        };
-    });
-
-    var ts = doc.getElementById("tscale");
-    var tstep = ts ? ts.value : 0.001;
-    
-    return {
-        mode: 0,
-        step: tstep,
-        xterms: terms.slice(0,2),
-        yterms: terms.slice(2,4)
-    };
-}
-
-function clear(canvas) {
-    if(g && !onTop)
-        g.stop();
-    _ctx = canvas.getContext('2d');
-    _ctx.clearRect(0,0,xs,ys);
+var Renderer = function(visCanvas, hidCanvas, cfg) {
+    this.cfg = cfg;
+    this.graph = new Harmonograph(cfg);
+    this.drawCanvas = hidCanvas;
+    this.drawCtx = this.drawCanvas.getContext('2d');
+    this.renderCanvas = visCanvas;
+    this.renderCtx = this.renderCanvas.getContext('2d');
+    this.color = '#ffffff';
+    this.lastColor = null;
+    this.colors = {};
+    this.points = [];
+    this.lastPoint = [];
+    this.paused = true;
+    this.count = 0;
+    this.xscale = 1;
+    this.yscale = 1;
+    this.xoff = 0;
+    this.yoff = 0;
+    this.error = null;
+    this.stepCount = 8;
+    this.isDrawing = false;
+    this.wantClear = false;
+    this.aframe = false;
+    this._init();
+    this.pauseCb = null;
+    this.move = true;
 };
 
-function draw(canvas, doc, onTop, defs) {
-    _canvas = canvas;
-    _ctx = canvas.getContext('2d');
-    var cfg = defs || graphConfig(doc);
+Renderer.prototype.setConfig = function(cfg, cb) {
+    var me = this;
+    this.pause(true, function() {
+        console.log(cfg);
+        me.graph = new Harmonograph(cfg);
+        me.cfg = cfg;
+        me._init();
+        cb();
+    });
+};
 
-    if(!onTop) {
-        if(g) g.stop();
-        _ctx.clearRect(0,0,xs,ys);
+Renderer.prototype.setColor = function(color) {
+    this.lastColor = this.color;
+    this.color = color;
+};
+
+Renderer.prototype.pause = function(done, cb) {
+    if(this.paused) {
+        this.resume();
     }
-    _ctx.strokeStyle = _newcolor;
-    g = new Harmonograph(cfg);
-    startDrawing(_ctx,g);
-}
+    this.pauseCb = cb;
+    this.paused = true;
+    this.wantClear = done ? true : false;
+};
 
-function drawMore(canvas, doc) {
-    _canvas = canvas;
-    if(g == null) {
-        draw(canvas, doc, true);
-    } else {
-        _ctx = canvas.getContext('2d');
-        g.maxCount += Math.floor(50000*mo);
-        if(mo < 4) ++mo;
-        _ctx.strokeStyle = _newcolor;
-        startDrawing(_ctx,g);
+Renderer.prototype.resume = function() {
+    this.paused = false;
+    if(!this.aframe) {
+        console.log("resuming");
+        this.aframe = true;
+        this._animate(-1);
     }
-}
+};
 
-function startDrawing(ctx, g) {
-    var first = true;
-    ctx.lineWidth = lwidth;
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-    ctx.beginPath();
+// pen down
+Renderer.prototype.startDrawing = function() {
+    console.log('start drawing');
+    this.isDrawing = true;
+};
 
-    var scaleX = xs/(2*g.maxX);
-    var scaleY = ys/(2*g.maxY);
+// pen up
+Renderer.prototype.stopDrawing = function(clear) {
+    console.log('stop drawing');
+    this.isDrawing = false;
+};
 
-    var sx = function(x) {
-        return (scaleX * (x + g.maxX));
+Renderer.prototype._animate = function(t) {
+    var me = this;
+    var anim = function(t) { 
+        me._animate(t); 
     };
-    var sy = function(y) {
-        return (scaleY * (y + g.maxY));
-    };
 
-    var ctrl;
-    var i = -1;
-    var closed = true;
-    var clr = _newcolor;
-    var p = function(err, pt) {
-        if(clr !== _newcolor) {
-            clr = _newcolor;
-            ctx.strokeStyle = clr;
-        }
+    if(t > 0) this._timeDelta(t);
+    this._step();
 
-        if(err) {
-            ctx.stroke();
-            closed = true;
-            return;
-        }
-        var x = sx(pt[0]);
-        var y = sy(pt[1]);
-
-        if(i === -1) {
-            ctx.moveTo(x,y);
+    if(this.paused) {
+        console.log("paused");
+        this.aframe = false;
+        if(this.wantClear) {
+            this.drawCtx.clearRect(0,0,this.xscale,this.yscale);
+            this.renderCanvas.width = this.renderCanvas.width;
+            this.wantClear = false;
+            //this.graph.count = 0;
+            console.log("cleared");
         } else {
-            if(closed && ctrl) {
-                ctx.beginPath();
-                ctx.moveTo(ctrl[0],ctrl[1]);
-                closed = false;
-            }
-            ctx.lineTo(x,y);
-            ctrl = [x,y];
-            //if(i % 2 === 1) {
-                //ctx.quadraticCurveTo(ctrl[0],ctrl[1],x,y);
-            //}
+            // center the canvas as a convenience
+            this.renderCanvas.width = this.renderCanvas.width;
+            console.log("center");
+            this.renderCtx.drawImage(this.drawCanvas, this.xoff, this.yoff);
         }
-        i += 1;
-    };
+        if(this.pauseCb) this.pauseCb();
+    } else {
+        window.requestAnimFrame(anim,this.renderCanvas);
+    }
+};
 
-    var done = false;
-    var ctr = 0;
-    var steps = 16;
-    var d = function(err,pt) {
-        if(err === "done") {
-            done = true;
-        }
-        else {
-            p(err,pt);
-        }
-    };
-    var x = function(t) {
-        ++ctr;
-        var swap = ctr % 180 === 0;
-        if(swap) {
-            if(steps < 256)
-                steps += 16;
-        }
-        g.run(d,steps);
-        if(!done) {
-            window.requestAnimFrame(x, _canvas);
-        }
-    };
+Renderer.prototype._timeDelta = function(t) {
+    /* update step count for frame rate here */
+    if(this.lt) {
+        this.lt.push(t);
+        if(this.count % 180 === 0) {
+            this.lt = this.lt.slice(this.lt.length - 31, this.lt.length -1);
+            var avgs = _.reduce(this.lt, function(memo, val) {
+                if(memo.last) {
+                    var delta = val - memo.last;
+                    return { count: ++memo.count, total: memo.total + delta, last: val };
+                } else {
+                    return { count: 0, total: 0, last: val };
+                }
+            }, { count: 0, total: 0, last: false });
 
-    window.requestAnimFrame(x, _canvas);
+            var fps = 1000/(avgs.total/avgs.count);
+            console.log("Avg : " + Math.round(fps) + "fps, stepcount: " + this.stepCount + ", count: " + this.count);
+        }
+    } else {
+        this.lt = [];
+        this.lt.push(t);
+    }
+};
 
-    //var d = new Date();
-    //g.run(p);
-    //var d2 = new Date() - d;
-    //console.log("Time: " + d2);
+
+Renderer.prototype._updateColor = function() {
+    if(this.color !== this.lastColor) {
+        this.drawCtx.strokeStyle = this.color;
+        this.lastColor = this.color;
+        this.colors[this.count] = this.color;
+    }
+};
+
+Renderer.prototype._updateStepCount = function() {
+    /* update step count for incremental speedup */
+    if(this.count % 60 === 0) {
+        if(this.stepCount < 64) {
+            this.stepCount += 2;
+        }
+    }
+};
+
+Renderer.prototype._step = function() {
+    var me = this;
+    var iter = function(err, pt) { me._onPoint(err, pt); };
+    this.count++;
+    this.graph.run(iter, this.stepCount);
+};
+
+Renderer.prototype._onPoint = function(err, pt) {
+    if(err) {
+        this.paused = true;
+        this.error = err;
+    } else if(pt == null) {
+        this._updateColor();
+        this._render();
+        this._updateStepCount();
+    } else {
+        this._accept(pt);
+    }
+};
+
+Renderer.prototype._accept = function(pt) {
+    this.points.push(pt);
+    var lp = this._scale(pt);
+    this.lastPoint = lp;
+    if(this.isDrawing) {
+        this.drawCtx.lineTo(lp[0],lp[1]);
+    } else {
+        this.drawCtx.moveTo(lp[0],lp[1]);
+    }
+};
+
+Renderer.prototype.wantMove = function(want) {
+    this.move = want ? true : false;
+};
+
+
+Renderer.prototype._scale = function(pt) {
+    /* 
+     * graph scale is [-maxX, maxX], [-maxY, maxY], so we need to
+     * reset it to use positive coords, and scale to the canvas
+     */
+    var gx = this.graph.maxX;
+    var gy = this.graph.maxY;
+    var xs = this.xscale/(2*gx);
+    var ys = this.yscale/(2*gy);
+    return [xs*(pt[0] + gx), ys*(pt[1] + gy)];
+};
+
+Renderer.prototype._render = function() {
+    if(this.isDrawing) {
+        this.drawCtx.stroke();
+        this.drawCtx.beginPath();
+        this.drawCtx.lineTo(this.lastPoint[0], this.lastPoint[1]);
+    }
+
+    this.renderCtx.clearRect(0,0,this.xscale,this.yscale);
+    this._transform();
+};
+
+Renderer.prototype._init = function() {
+    this.xscale = this.drawCanvas.width;
+    this.yscale = this.drawCanvas.height;
+    this.xoff = (this.renderCanvas.width - this.xscale)/2;
+    this.yoff = (this.renderCanvas.height - this.yscale)/2;
+
+    var d = this.drawCtx;
+    // draw the table border
+    d.save();
+    d.strokeStyle = '#aaaabb';
+    d.lineWidth = twidth;
+    d.strokeRect(toffset, toffset, this.xscale-(2*toffset), this.yscale-(2*toffset));
+    //d.roundRect(toffset,toffset,this.xscale-toffset, this.yscale-toffset);
+    //d.stroke();
+    this.renderCtx.drawImage(this.drawCanvas,this.xoff,this.yoff);
+    d.restore();
+
+
+    d.lineWidth = lwidth;
+    d.beginPath();
+    d.moveTo(this._scale(this.graph.increment()));
+};
+
+Renderer.prototype._transform = function() {
+    var w = this.renderCanvas.width;
+    var h = this.renderCanvas.height;
+    if(this.move) {
+        if(this.lastPoint.length > 0) {
+            var x = this.xscale - this.lastPoint[0];
+            var y = this.yscale - this.lastPoint[1];
+        }
+
+        /* set rotation and scale here */
+        this.renderCanvas.width = w;
+        this.renderCtx.drawImage(this.drawCanvas, x - this.xscale/2 + this.xoff, y - this.yscale/2 + this.yoff);
+    } else {
+        this.renderCanvas.width = w;
+        this.renderCtx.drawImage(this.drawCanvas, this.xoff, this.yoff);
+    }
+};
+
+/*
+ * <clip>
+ * http://stackoverflow.com/questions/1255512/how-to-draw-a-rounded-rectangle-on-html-canvas
+ */
+CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
+  if (w < 2 * r) r = w / 2;
+  if (h < 2 * r) r = h / 2;
+  this.beginPath();
+  this.moveTo(x+r, y);
+  this.arcTo(x+w, y,   x+w, y+h, r);
+  this.arcTo(x+w, y+h, x,   y+h, r);
+  this.arcTo(x,   y+h, x,   y,   r);
+  this.arcTo(x,   y,   x+w, y,   r);
+  this.closePath();
+  this.stroke();
+  return this;
 }
 
-function loadDefault(id, doc) {
-    var cfg = defaults[id] || defaults.A;
-    document.getElementById('tscale').value = cfg.step;
+// Function to compute hgraph params for an imaginary table suspended
+// at the corners. We pretend there are pivot points in the middle of
+// two of the four edges of the table, and calculate the distance
+// between that point and the provided center of mass. This is the
+// first factor affecting the frequencies. The second factor affecting
+// the frequencies is the amplitude of the initial push (which is
+// different for each axis). This generates an initial X and Y term
+// for our hgraph, and we add a third X term to be the rotational
+// frequency. This third term is based on the radial distance of the
+// center-of-mass vs the geometric center, ranging from [1.5 -
+// 2]*avg(px, py)
 
-    _.each([1,2,3,4], function(i) {
-        var d = i<=2 ? cfg.xterms[i-1] : cfg.yterms[i-3];
-        document.getElementById('f_' + i).value = d.frequency;
-        document.getElementById('d_' + i).value = d.damping;
-        document.getElementById('p_' + i).value = d.phase;
-    });
+// length=l, width=w, height=h of table in meters
+// x,y --> coords of weights on a [0,1] scale (x is along l, y is along w)
+// amplitudes and phases of swing are in radians
+// phase of rotation is in radians
+var tableConfig = function(l, w, h, x, y, xa, xp, ya, yp, ra, rp) {
+    var cons = [1/16, 11/3072, 173/737280, 22931/1321205760];
+
+    var xz = Math.sqrt(Math.pow(Math.abs(l/2 - l*x),2) + Math.pow(w*y,2));
+    var yz = Math.sqrt(Math.pow(Math.abs(w/2 - w*y),2) + Math.pow(l*x,2));
+    var xr = Math.sqrt(Math.pow(Math.abs(l/2 - l*x),2) + Math.pow(Math.abs(w/2 - w*y),2));
+    var xd = xr/(Math.sqrt(Math.pow(l/2,2) + Math.pow(w/2,2)));
+
+    var xl = Math.sqrt(Math.pow(xz,2) + Math.pow(h,2));
+    var yl = Math.sqrt(Math.pow(yz,2) + Math.pow(h,2));
+
+    var sx = 1 + cons[0]*Math.pow(xa,2) + cons[1]*Math.pow(xa,4) + cons[2]*Math.pow(xa,6) + cons[3]*Math.pow(xa,8);
+    var xf = 1/(2*Math.PI*Math.sqrt(sx*xl/9.81));
+
+    var sy = 1 + cons[0]*Math.pow(ya,2) + cons[1]*Math.pow(ya,4) + cons[2]*Math.pow(ya,6) + cons[3]*Math.pow(ya,8);
+    var yf = 1/(2*Math.PI*Math.sqrt(sy*yl/9.81));
+    var rf = (1.5 + xd/2) * (xf+yf)/2;
+
+    var cfg = {
+        mode: HARM,
+        step: .005,
+        xterms: [
+            { frequency: xf, damping: 0.0005, phase: xp, amplitude: xa },
+            { frequency: rf, damping: 0.0005, phase: rp, amplitude: ra },
+        ],
+        yterms: [
+            { frequency: yf, damping: 0.0005, phase: yp, amplitude: ya },
+        ],
+    };
+    return cfg;
+}
+
+
+var spiroConfig = function(l, k) {
+    var a13 = k;
+    var a24 = l*k;
+    var p2 = Math.PI/2;
+    var f = (1-k)/k;
+
+    var cfg = {
+        mode: HARM,
+        step: .01,
+        xterms: [
+            { frequency: 1, damping: 0, phase: p2, amplitude: a13 },
+            { frequency: f, damping: 0, phase: p2, amplitude: a24 },
+        ],
+        yterms: [
+            { frequency: 1, damping: 0, phase: 0, amplitude: a13 },
+            { frequency: f, damping: 0, phase: 0, amplitude: a24 },
+        ],
+    };
+    return cfg;
 };
 
-defaults = {
-    X: {
-        mode: 0,
-        step: 0.003,
-        xterms: [
-            { frequency: 3.001, damping: 0.002, phase: 0, amplitude: 10 },
-            { frequency: 2, damping: 0.0065, phase: 0, amplitude: 10 }
-        ],
-        yterms: [ 
-            { frequency: 3, damping: 0.004, phase: 1.57, amplitude: 10 },
-            { frequency: 2, damping: 0.019, phase: 4.7124, amplitude: 10 }
-        ]
-    },
-    A: {
-        mode: 0,
-        step: 0.001,
-        xterms: [
-            { frequency: 1.01, damping: 0.005, phase: 0.1, amplitude: 1 },
-            { frequency: 3.01, damping: 0.005, phase: 1.57, amplitude: 1 }
-        ],
-        yterms: [
-            { frequency: 1, damping: 0.001, phase: 0, amplitude: 1 },
-            { frequency: 2, damping: 0.001, phase: 1.57, amplitude: 1 }
-        ],
-    },
-    B: {
-        mode: 0,
-        step: 0.007,
-        xterms: [
-            { frequency: 0.00579, damping: 0.000001, phase: 0.31, amplitude: 1 },
-            { frequency: 3.001, damping: 0.001, phase: 0, amplitude: 1 }
-        ],
-        yterms: [
-            { frequency: .004, damping: 0.0001, phase: 1.97, amplitude: 1 },
-            { frequency: 2, damping: 0.0001, phase: 1.57, amplitude: 1 }
-        ],
-    },
-    C: {
-        mode: 0,
-        step: 0.002,
-        xterms: [
-            { frequency: 2.005, damping: 0.002, phase: 0.1, amplitude: 1 },
-            { frequency: 3.003, damping: 0.001, phase: 0.6, amplitude: 1 }
-        ],
-        yterms: [
-            { frequency: 2.005, damping: 0.002, phase: 1.97, amplitude: 1 },
-            { frequency: 4.003, damping: 0.001, phase: 1.17, amplitude: 1 }
-        ],
-    },
-    D: {
-        mode: 0,
-        step: 0.003,
-        xterms: [
-            { frequency: 1.23, damping: 0.006, phase: 0.123, amplitude: 1 },
-            { frequency: 4.32, damping: 0.021, phase: 3.210, amplitude: 1 }
-        ],
-        yterms: [
-            { frequency: 2.01, damping: 0.002, phase: 1.57, amplitude: 1 },
-            { frequency: 2.14, damping: 0.01, phase: 1.66, amplitude: 1 }
-        ],
-    },
-    E: {
-        mode: 0,
-        step: 0.007,
-        xterms: [
-            { frequency: 3.001, damping: 0.018, phase: 0.4, amplitude: 1 },
-            { frequency: 28.007, damping: 0.41, phase: 0.2, amplitude: 1 }
-        ],
-        yterms: [
-            { frequency: 875, damping: 0.175, phase: 1.67, amplitude: 1 },
-            { frequency: 2.005, damping: 0.001, phase: 1.47, amplitude: 1 }
-        ],
-    },
-    F: {
-        mode: 0,
-        step: 0.001,
-        xterms: [
-            { frequency: 177, damping: 0.123, phase: 0.7, amplitude: 1 },
-            { frequency: 3.007, damping: 0.0002, phase: 0.12, amplitude: 1 }
-        ],
-        yterms: [
-            { frequency: 2.005, damping: 0.001, phase: 1.57, amplitude: 1 },
-            { frequency: 17, damping: 0.0234, phase: 1.57, amplitude: 1 }
-        ],
-    },
-    G: {
-        mode: 0,
-        step: 0.0008,
-        xterms: [
-            { frequency: 2.005, damping: 0.0001, phase: 0, amplitude: 1 },
-            { frequency: 4.003, damping: 0.0001, phase: 0.21, amplitude: 1 },
-            { frequency: 27.001, damping: 0.007, phase: 0.43, amplitude: 1 }
-        ],
-        yterms: [
-            { frequency: 4.001, damping: 0.005, phase: 1.87, amplitude: 1 },
-            { frequency: 2.011, damping: 0.0001, phase: 1.67, amplitude: 1 },
-            { frequency: 3.003, damping: 0.0005, phase: 1.47, amplitude: 1 },
-            { frequency: 31.003, damping: 0.05, phase: 1.27, amplitude: 1 }
-        ],
-    }
-};
+exports.Renderer = Renderer;
+exports.tableConfig = tableConfig;
+exports.spiroConfig = spiroConfig;
 
-function changeColor() {
-    if(_ctx) {
-        _newcolor = rotColor();
-    }
-};
-
-exports.draw = draw;
-exports.drawMore = drawMore;
-exports.clear = clear;
-exports.loadDefault = loadDefault;
-exports.defaults = defaults;
-exports.changeColor = changeColor;

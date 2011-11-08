@@ -8,8 +8,24 @@ var _ = require('underscore');
  * x(t) =a1sin(tf1 + p1)e^-d1t + a2sint(f2 + p2)e^-d2t
  * y(t) =a3sin(tf3 + p3)e^-d3t + a4sint(f4 + p4)e^-d4t
  *
+ * In a real physical harmonograph:
+ *   the frequencies will be almopst equal, since the strings are the same length
+ *     but, the slight differences really matter to the image!
+ *   the second X term would be the rotational procession term
+ *   there would be no second y term
+ *   the period is an infinite series:
+ *      T = 2*pi*sqrt( (L/g) * (1 + 1o^2/16 + 11o^4/3072 + 173o^6/737280 + 22931o^8/1321205760) )
+ *   where o is the deflection angle in radians
+ *   and 1rad = 180/pi degrees, pi/180 rads = 1d
+ *   and L is the distance between the pivot and the center of oscillation 
  *
- * f = frequency
+ * Example:
+ * Gravity  ~= 9.81m/s^2
+ * Ceiling  ~= 3m
+ * Table    ~= 2m x 1.5m
+ * Range(L) ~= [3.0, 3.9], L/g = [.30581, .39755]
+ *        f ~= [0.250251, 0.285329]
+ * w = angular frequency ( = 2pi*f where f = frequency)
  * p = phase (0 < p < 2pi)
  * a = amplitude
  * d = damping 
@@ -36,9 +52,9 @@ var _ = require('underscore');
 
 
 var DEF_AMPLITUDE = 1;
-var DEF_DAMPING = 0.02;
+var DEF_DAMPING = 0;
 var DEF_STEP = 0.01;
-var DEF_MAX_ITERS = 100 * 1000;
+var DEF_MAX_ITERS = 1000 * 1000;
 var HARM = 0;
 var LISA = 1;
 var SPIR = 2;
@@ -120,7 +136,7 @@ Harmonograph.prototype.run = function(cb,count) {
     while(!this.isDone()) {
         cb(null,this.increment());
         if(++i === cnt) {
-            cb(true);
+            cb(null, null);
             return;
         }            
     }
@@ -152,3 +168,4 @@ Harmonograph.prototype.isDone = function() {
 };
 
 exports.Harmonograph = Harmonograph;
+exports.HARM = HARM;

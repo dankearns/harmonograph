@@ -4,7 +4,7 @@ var client = require('browserify')({mount: '/lib.js', watch: true});
 var server = connect.createServer();
 var port = 8000;
 
-client.require(['./js/renderer', './js/hgraph']);
+client.require(['./js/renderer', './js/hgraph', './js/rendr']);
 
 server.use(connect.static(__dirname));
 server.use(client);

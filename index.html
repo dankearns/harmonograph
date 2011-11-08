@@ -5,8 +5,9 @@
 <script type="text/javascript" src="/lib.js"></script>
 <script>
 
-var ren = require('./renderer');
+var ren = require('./rendr');
 var _ = require('underscore');
+var Renderer = ren.Renderer;
 
 window.onload = function() {
   window.requestAnimFrame = (function() {
@@ -21,59 +22,110 @@ window.onload = function() {
   })();
 
   var df = function() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    draw.width = window.innerWidth;
+    draw.height = window.innerHeight;
+    blit.width = window.innerWidth*.95;
+    blit.height = window.innerHeight*.95;
   }
-  var canvas = document.getElementById('harmonograph');
 
-  df(); ren.draw(canvas, document);
+  var oldcfg = "";
+  var makeConfig = function() {
+    var doSpiro = false;
+    var spiro = document.getElementById('params_xy').value;
+    if(spiro.charAt(0) == 's') {
+      spiro = spiro.slice(1);
+      doSpiro = true;
+      console.log("spiromode");
+    }
+    var pxy = spiro.split(',');
+    pxy = _.map(pxy, function(i) { return Number(i); });
+    var pap = document.getElementById('params_ap').value.split(',');
+    pap = _.map(pap, function(i) { return Number(i); });
+    var par = document.getElementById('params_r').value.split(',');
+    par = _.map(par, function(i) { return Number(i); });
 
-  canvas.onclick = function() {
-   ren.changeColor();
-  };
+    var memo = [].concat(pxy,pap,par).join(",");
+    var isNew = false;
+   if(memo != oldcfg) {
+      oldcfg = memo;
+      isNew = true;
+    }
 
-  document.getElementById('Go').onclick = function() {
-    df();
-   ren.draw(canvas, document);
-  };
+   var c1 = ren.spiroConfig(pxy[0],pxy[1]);
+   c1.xterms[0].damping = .002;
+   c1.xterms[1].damping = .001;
+   c1.yterms[0].damping = .002;
+   c1.yterms[1].damping = .001;
+   var c2 = ren.tableConfig(4, 2.5, 2, pxy[0], pxy[1], pap[0], pap[1], pap[2], pap[3], par[0], par[1]);
 
-  document.getElementById('More').onclick = function() {
-    ren.drawMore(canvas, document);
-  };
+   return {
+      isNew: isNew,
+      cfg: doSpiro ? c1 : c2
+   }
+ };
 
-  var zoomed = false;
-  document.getElementById('Over').onclick = function() {
-    df();
-    ren.draw(canvas, document, true);
+  var palette = [
+    '#d95208', '#ab3119', '#ef3328', '#d0150a', '#d65841', '#b76a39',
+    '#c05639', '#c7606c', '#a76e37', '#d13b4a', '#d95f1f', '#c55331'
+  ];
+
+  var draw = document.getElementById('hdraw');
+  var blit= document.getElementById('hblit');
+  df();
+  var pidx = 0;
+  var pendown = true;
+  var renderer = null;
+
+  draw.onclick = function() {
+    if(renderer == null) return;
+    var i = pidx++ % palette.length;
+    renderer.setColor(palette[i]);    
   };
 
   document.getElementById('Clear').onclick = function() {
-    ren.clear(canvas);
+    renderer.pause(true);
   };
 
-  var hidden = false;
-  var tb = document.getElementById('ctrls');
-  document.getElementById('hide').onclick = function() {
-    if(hidden) {
-      tb.style.visibility = 'visible';
+  var moveToggle = false;
+  document.getElementById('Move').onclick = function() {
+    if(renderer) {
+      renderer.wantMove(moveToggle);
+      moveToggle = !moveToggle;
     }
-    else {
-      tb.style.visibility = 'hidden';
-    }
-    hidden = !hidden;
-};
+  };
 
- _.each(["A","B","C","D","E","F","G","X"], function(id) {
-    var e = document.getElementById('def_' + id);
-    e.onclick = function() {
-      if("G" === id) {
-        var cfg = ren.defaults[id];
-        df();
-        ren.draw(canvas, document, false, cfg);
+ document.getElementById('Start').onclick = function() {
+    var cfg = makeConfig();
+
+    if(renderer == null) {
+      renderer = new Renderer(draw, blit, cfg.cfg);
+      // set a color
+      draw.onclick();
+      // pen down
+      renderer.startDrawing();
+      renderer.resume();
+    } else {
+      if(cfg.isNew) {
+        renderer.setConfig(cfg.cfg, function() {
+          renderer.resume();
+        });
+      } else {
+        renderer.resume();
       }
-      ren.loadDefault(id,document);
-    };
- });
+    }
+ };
+
+  document.getElementById('Stop').onclick = function() {
+    renderer.pause(false);
+  };
+  document.getElementById('Pen').onclick = function() {
+    pendown = !pendown;
+    if(pendown) {
+      renderer.startDrawing();
+    } else {
+      renderer.stopDrawing();
+    }
+ };
 
 }
 </script>
@@ -86,82 +138,34 @@ window.onload = function() {
   <form onSubmit="return false;">
   <table id="ctrls" width="200" border="0">
 
+    <tr><td class="header" colspan="2">Swing Params</td></tr>
+    <tr><td><label for="params_xy">x,y [0,1]</label></td>
+    <td><input name="params_xy" id="params_xy" type="text" size="15" value="0.44,0.47"></td></tr>
+    <tr><td><label for="params_ap">xa,xp,ya,yp</label></td>
+    <td><input name="params_ap" id="params_ap" type="text" size="15" value="1.9,0,2.1,0"></td></tr>
+    <tr><td><label for="params_r">ra,rp</label></td>
+    <td><input name="params_r" id="params_r" type="text" size="15" value=".5,0.1"></td></tr>
+
+    <tr><td class="header" colspan="2">Controls</td></tr>
     <tr><td colspan="2">
-      <span class="ex" id="def_X">Defaults:</span>
-      <span class="ex" id="def_A">A</span>
-      <span class="ex" id="def_B">B</span>
-      <span class="ex" id="def_C">C</span>
-      <span class="ex" id="def_D">D</span>
-      <span class="ex" id="def_E">E</span>
-      <span class="ex" id="def_F">F</span>
-      <span class="ex" id="def_G">G</span>
-</td></tr>
-    <tr><td class="header" colspan="2">Term X1</td></tr>
-    <tr><td><label for="f_1">Frequency</label></td>
-    <td><input name="f_1" id="f_1" type="text" size="5" value="4.001"></td></tr>
-    <tr><td><label for="p_1">Phase</label></td>
-    <td><input name="p_1" id="p_1" type="text" size="5" value="0"></td></tr>
-<!--
-   <tr><td><label for="a_1">Amplitude</label></td>
-    <td><input name="a_1" id="a_1" type="text" size="5" value="1"></td></tr>
- -->
-   <tr><td><label for="d_1">Damping</label></td>    
-    <td><input name="d_1" id="d_1" type="text" size="5" value=".0001"></td></tr>
-
-    <tr><td class="header" colspan="2">Term X2</td></tr>
-    <tr><td><label for="f_2">Frequency</label></td>    
-    <td><input name="f_2" id="f_2" type="text" size="5" value="3.001"></td></tr>
-    <tr><td><label for="p_2">Phase</label></td>    
-    <td><input name="p_2" id="p_2" type="text" size="5" value="0"></td></tr>
-<!--
-    <tr><td><label for="a_2">Amplitude</label></td>    
-    <td><input name="a_2" id="a_2" type="text" size="5" value="1"></td></tr>
- -->
-    <tr><td><label for="d_2">Damping</label></td>    
-    <td><input name="d_2" id="d_2" type="text" size="5" value=".0001"></td></tr>
-
-    <tr><td class="header" colspan="2">Term Y1</td></tr>
-    <tr><td><label for="f_3">Frequency</label></td>    
-    <td><input name="f_3" id="f_3" type="text" size="5" value="3.02"></td></tr>
-    <tr><td><label for="p_3">Phase</label></td>    
-    <td><input name="p_3" id="p_3" type="text" size="5" value="1.57"></td></tr>
-<!--
-    <tr><td><label for="a_3">Amplitude</label></td>    
-    <td><input name="a_3" id="a_3" type="text" size="5" value="1"></td></tr>
- -->
-    <tr><td><label for="d_3">Damping</label></td>    
-    <td><input name="d_3" id="d_3" type="text" size="5" value=".0001"></td></tr>
-
-    <tr><td class="header" colspan="2">Term Y2</td></tr>
-    <tr><td><label for="f_4">Frequency</label></td>    
-    <td><input name="f_4" id="f_4" type="text" size="5" value="2"></td></tr>
-    <tr><td><label for="p_4">Phase</label></td>    
-    <td><input name="p_4" id="p_4" type="text" size="5" value="1.57"></td></tr>
-<!--
-    <tr><td><label for="a_4">Amplitude</label></td>    
-    <td><input name="a_4" id="a_4" type="text" size="5" value="1"></td></tr>
- -->
-    <tr><td><label for="d_4">Damping</label></td>    
-    <td><input name="d_4" id="d_4" type="text" size="5" value=".0001"></td></tr>
-
-    <tr><td class="header" colspan="2">General</td></tr>
-    <tr><td><label for="tscale">Time Scale</label></td>    
-    <td><input name="tscale" id="tscale" type="text" size="5" value=".003"></td></tr>
-
-    <tr><td class="header" colspan="2">
       <div class="bdiv">
-        <button id="Clear" name="Clear">Clear</button>
-        <button id="Go" name="Go">Draw</button>
-        <button id="Over" name="Over">Over</button>
-        <button id="More" name="More">More</button>
-     </div>
+        <button class="bc" id="Clear" name="Clear">Clear</button>
+        <button class="bc" id="Start" name="Start">Start</button><br/>
+        <button class="bc" id="Pen" name="Pen">&nbsp;Pen&nbsp;</button>
+        <button class="bc" id="Stop" name="More">Stop&nbsp;</button><br/>
+        <button class="bc" id="Move" name="Move">Move&nbsp;</button><br/>
+    </div>
   </td></tr>
   </table>
   </form>
 </div>
 
 <div id="hg">
-  <canvas id="harmonograph" width="1000", height="750"></canvas>
+  <canvas class="draw" id="hdraw" width="1000", height="750"></canvas>
+</div>
+
+<div id="hgh">
+    <canvas class="blit" id="hblit" width="1000", height="750"></canvas>
 </div>
 
 </body> </html>
