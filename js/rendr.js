@@ -35,10 +35,10 @@ var Renderer = function(visCanvas, hidCanvas, cfg) {
     this.move = true;
 };
 
-Renderer.prototype.setConfig = function(cfg, cb) {
+Renderer.prototype.setConfig = function(cfg, cb, clear) {
+    var doClear = (clear === true) ? true : false;
     var me = this;
-    this.pause(true, function() {
-        console.log(cfg);
+    this.pause(doClear, function() {
         me.graph = new Harmonograph(cfg);
         me.cfg = cfg;
         me._init();
@@ -76,7 +76,7 @@ Renderer.prototype.startDrawing = function() {
 };
 
 // pen up
-Renderer.prototype.stopDrawing = function(clear) {
+Renderer.prototype.stopDrawing = function() {
     console.log('stop drawing');
     this.isDrawing = false;
 };
@@ -355,19 +355,15 @@ var spiroConfig = function(l, k) {
 
 
 /*
- * The gesture is assumed to be an arc-ish line measured in a (0,0) to
- * (1,1) coord space, with the max deviation from a straight line g0
- * and the linear offset of that point along the line as g1.
- * x1 - x0 -> convert to rads, use as xampl
- * y1 - y0 -> convert to rads, use as yampl
- * g0 -> convert to rads, use as both x and y rotational param ampl
- * g1 -> convert to rads, use as the xy phase difference 
- * total y distance -> yampl
+ * Supply: 
+ * A damping value
+ * Four frequencies (best use integer ratios for these)
+ * Three amplitudes and one phase
 */
 var gestureConfig = function(d,freqs, vals) {
-    var vrads = _.map(vals, function(v) { return 2*Math.PI*v; });
+    var vrads = _.map(vals, function(v) { return Math.PI*v; });
     var vfreq = freqs;
-    vfreq[1] = adjustFreq(vrads[0],vfreq[1]);
+    vfreq[1] = adjustFreq(vrads[2],vfreq[1]);
 
     var cfg = {
         mode: HARM,

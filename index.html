@@ -62,6 +62,7 @@ var makeConfig = function() {
         ],
     };
   } else {
+    vals = _.map(vals, function(v) { return 0.01*v; });
     cfg = ren.gestureConfig(damp, freqs, vals);
   }
   console.log(cfg);
@@ -101,7 +102,7 @@ var makeConfig = function() {
      for(var i=0; i< tdnodes.length; ++i) {
        var pe = tdnodes.item(i);
        if(pe.className == "pc") {
-         var c = colors[pidx++ % plen];
+        var c = colors[pidx++ % plen];
          pe.style.background = c;
          pe.onclick = function(ev) {
            renderer.setColor(ev.srcElement.style.background);
@@ -122,37 +123,35 @@ setupPalette(palette);
     hidden = !hidden;
   };
 
- document.getElementById('Start').onclick = function() {
-    var cfg = makeConfig();
+ var sstoggle = true;
+ var sbutton = document.getElementById('Start');
+ var overbutton = document.getElementById('over');
+ sbutton.onclick = function() {
+    var clear = !overbutton.checked;
+    if(sstoggle) {
+      sbutton.innerHTML = "Stop";
+      var cfg = makeConfig();
 
-    if(renderer == null) {
-      renderer = new Renderer(draw, blit, cfg.cfg);
-      // set a color
-      renderer.setColor(palette[0]);
-      renderer.wantMove(false);
-      renderer.startDrawing();
-      renderer.resume();
-    } else {
-      if(cfg.isNew) {
-        renderer.setConfig(cfg.cfg, function() {
-          renderer.resume();
-        });
-      } else {
+      if(renderer == null) {
+        renderer = new Renderer(draw, blit, cfg.cfg);
+        renderer.setColor(palette[0]);
+        renderer.wantMove(false);
+        renderer.startDrawing();
         renderer.resume();
+      } else {
+        if(cfg.isNew) {
+          renderer.setConfig(cfg.cfg, function() {
+            renderer.resume();
+          }, clear);
+        } else {
+          renderer.resume();
+        }
       }
-    }
- };
-
-  document.getElementById('Stop').onclick = function() {
-    renderer.pause(false);
-  };
-  document.getElementById('Pen').onclick = function() {
-    pendown = !pendown;
-    if(pendown) {
-      renderer.startDrawing();
     } else {
-      renderer.stopDrawing();
+      sbutton.innerHTML = "Start&nbsp;";
+      renderer.pause(false);
     }
+    sstoggle = !sstoggle;
  };
 
 }
@@ -165,24 +164,24 @@ setupPalette(palette);
   <span class="toggle" id="hide">X</span>
   <form onSubmit="return false;">
 
-    <table id="palette" width="220" border="1">
-      <tr><td colspan="4" class="header">Gesture [x,y,ro,ra]</td></tr>
-      <tr><td colspan="4"><input name="gesture" id="gesture" type="text" value="0.8,0.2,0.4,0.25" /></td></tr>
-      <tr><td class="header" colspan="4">Controls</td></tr>
+    <table id="palette" width="160" border="0">
+     <tr><td colspan="4">
+       <input name="gesture" id="gesture" type="text" value="80,20,40,25" />
+    </td></tr>
+
+    <tr>
+      <td colspan="3">Add layer</td>
+      <td><input name="over" id="over" type="checkbox" checked="false" /></td>
+   </tr>
+
+     <tr><td class="pc">&nbsp;</td><td class="pc">&nbsp;</td><td class="pc">&nbsp;</td><td class="pc">&nbsp;</td></tr>
+      <tr><td class="pc">&nbsp;</td><td class="pc">&nbsp;</td><td class="pc">&nbsp;</td><td class="pc">&nbsp;</td></tr>
+      <tr><td class="pc">&nbsp;</td><td class="pc">&nbsp;</td><td class="pc">&nbsp;</td><td class="pc">&nbsp;</td></tr>
+      <tr><td class="pc">&nbsp;</td><td class="pc">&nbsp;</td><td class="pc">&nbsp;</td><td class="pc">&nbsp;</td></tr>
       <tr><td colspan="4"><div class="bdiv">
         <button class="bc" id="Jiggle" name="Jiggle">Jiggle</button>
-        <button class="bc" id="Start" name="Start">Start</button><br/>
-        <button class="bc" id="Pen" name="Pen">&nbsp;Pen&nbsp;</button>
-        <button class="bc" id="Stop" name="Stop">Stop&nbsp;</button><br/>
-        <!--        <button class="bc" id="Move"
-        name="Move">Move&nbsp;</button> -->
-        
-      </div></td></tr>
-      <tr><td class="header" colspan="4">Colors</td></tr>
-      <tr><td class="pc">&nbsp;</td><td class="pc">&nbsp;</td><td class="pc">&nbsp;</td><td class="pc">&nbsp;</td></tr>
-      <tr><td class="pc">&nbsp;</td><td class="pc">&nbsp;</td><td class="pc">&nbsp;</td><td class="pc">&nbsp;</td></tr>
-      <tr><td class="pc">&nbsp;</td><td class="pc">&nbsp;</td><td class="pc">&nbsp;</td><td class="pc">&nbsp;</td></tr>
-      <tr><td class="pc">&nbsp;</td><td class="pc">&nbsp;</td><td class="pc">&nbsp;</td><td class="pc">&nbsp;</td></tr>
+        <button class="bc" id="Start" name="Start">Start</button>
+   </div></td></tr>
     </table>
 
   </form>
