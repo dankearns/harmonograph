@@ -28,80 +28,89 @@ window.onload = function() {
     blit.height = window.innerHeight*.95;
   }
 
-  var oldcfg = "";
-  var makeConfig = function() {
-    var doSpiro = false;
-    var doHarm = false;
-    var spiro = document.getElementById('params_xy').value;
-    if(spiro.charAt(0) == 's') {
-      spiro = spiro.slice(1);
-      doSpiro = true;
-      console.log("spiromode");
-    } else if(spiro.charAt(0) == 'h') {
-      spiro = spiro.slice(1);
-      doHarm = true;
-   }
-    var pxy = spiro.split(',');
-    pxy = _.map(pxy, function(i) { return Number(i); });
-    var pap = document.getElementById('params_ap').value.split(',');
-    pap = _.map(pap, function(i) { return Number(i); });
-    var par = document.getElementById('params_r').value.split(',');
-    par = _.map(par, function(i) { return Number(i); });
 
-    var memo = [].concat(pxy,pap,par).join(",");
-    if(doSpiro) memo += 's';
-    if(doHarm) memo += 'h';
+var damp = 0.005;
+var freqs = [1,2,1,2];
+var prev = null;
+var g = document.getElementById('gesture');
+var makeConfig = function() {
+  var gv = g.value;
+  var isNew = false
+  if(gv != prev)  {
+    isNew = true;
+    prev = gv;
+  }
+  var geekMode = gv.charAt(0) == 'h' ? true : false;
+  var vals = geekMode ? gv.slice(1).split(',') : gv.split(',');
+  var cfg;
 
-    var isNew = false;
-    if(memo != oldcfg) {
-       oldcfg = memo;
-       isNew = true;
-     }
+  if(geekMode) {
+    if(vals.length != 17) {
+      alert("Need 17 values! s,4f,4d,4p,4a");
+      return;
+    }
+    cfg = {
+        mode: 0,
+        step: vals[0],
+        xterms: [
+            { frequency: vals[1], damping: vals[5], phase:  vals[9], amplitude: vals[13] },
+            { frequency: vals[2], damping: vals[6], phase: vals[10], amplitude: vals[14] },
+        ],
+        yterms: [
+            { frequency: vals[3], damping: vals[7], phase: vals[11], amplitude: vals[15] },
+            { frequency: vals[4], damping: vals[8], phase: vals[12], amplitude: vals[16] },
+        ],
+    };
+  } else {
+    cfg = ren.gestureConfig(damp, freqs, vals);
+  }
+  console.log(cfg);
 
-   var cfg;
-   if(doSpiro) {
-     var c1 = ren.spiroConfig(pxy[0],pxy[1]);
-     c1.xterms[0].damping = .002;
-     c1.xterms[1].damping = .001;
-     c1.yterms[0].damping = .002;
-     c1.yterms[1].damping = .001;
-     cfg = c1;
-   } else if (doHarm) {
-     cfg = {
-       mode: 0,
-       step: .01,
-       xterms: [
-            { frequency: pxy[0], damping: 0.0005, phase: pap[0], amplitude: 1 },
-            { frequency: pxy[1], damping: 0.0005, phase: pap[1], amplitude: 1 },
-       ],
-       yterms: [
-            { frequency: par[0], damping: 0.0005, phase: pap[2], amplitude: 1 },
-            { frequency: par[1], damping: 0.0005, phase: pap[3], amplitude: 1 },
-       ]
-     };
-   } else {
-     cfg = ren.tableConfig(3, 2, 1.5, pxy[0], pxy[1], pap[0], pap[1], pap[2], pap[3], par[0], par[1]);
-   }
-
-
-   return {
+  return {
       isNew: isNew,
       cfg: cfg
    }
  };
 
+  document.getElementById('Jiggle').onclick = function() {
+    freqs = _.map(freqs, function() {
+      return Math.ceil(Math.random()*5);
+    });
+    prev = null;
+    console.log(freqs);
+  }
+
   var palette = [
     '#b2ae6d','#594c6c','#f9994b','#ed563d','#9f5843','#de9b5d',
     '#f4c27e', '#8ca360','#edaca8','#ec867f','#c95c44','#d67e78',
     '#bfb48d','#9c4223','#e96556','#727548'
- ];
+  ];
 
   var draw = document.getElementById('hdraw');
   var blit= document.getElementById('hblit');
   df();
   var pidx = 0;
-  var pendown = true;
   var renderer = null;
+  var pendown = true;
+
+  function setupPalette(colors) {
+     var palelem = document.getElementById('palette');
+     var tdnodes = palelem.getElementsByTagName('td');
+     var pidx = 0;
+     var plen = colors.length;
+     for(var i=0; i< tdnodes.length; ++i) {
+       var pe = tdnodes.item(i);
+       if(pe.className == "pc") {
+         var c = colors[pidx++ % plen];
+         pe.style.background = c;
+         pe.onclick = function(ev) {
+           renderer.setColor(ev.srcElement.style.background);
+         }
+       }
+     }
+  }
+
+setupPalette(palette);  
 
   var hidden = false;
   var hide = document.getElementById('ctrls');
@@ -113,33 +122,14 @@ window.onload = function() {
     hidden = !hidden;
   };
 
-  draw.onclick = function() {
-    if(renderer == null) return;
-    var j = Math.floor(Math.random()*palette.length);
-    //var i = pidx++ % palette.length;
-    renderer.setColor(palette[j]);    
-  };
-
-  document.getElementById('Clear').onclick = function() {
-    renderer.pause(true);
-  };
-
-  var moveToggle = false;
-  document.getElementById('Move').onclick = function() {
-    if(renderer) {
-      renderer.wantMove(moveToggle);
-      moveToggle = !moveToggle;
-    }
-  };
-
  document.getElementById('Start').onclick = function() {
     var cfg = makeConfig();
 
     if(renderer == null) {
       renderer = new Renderer(draw, blit, cfg.cfg);
       // set a color
-      draw.onclick();
-      // pen down
+      renderer.setColor(palette[0]);
+      renderer.wantMove(false);
       renderer.startDrawing();
       renderer.resume();
     } else {
@@ -174,27 +164,27 @@ window.onload = function() {
 <div id="controls">
   <span class="toggle" id="hide">X</span>
   <form onSubmit="return false;">
-  <table id="ctrls" width="200" border="0">
 
-    <tr><td class="header" colspan="2">Swing Params</td></tr>
-    <tr><td><label for="params_xy">x,y [0,1]</label></td>
-    <td><input name="params_xy" id="params_xy" type="text" size="15" value="h0.25,0.249"></td></tr>
-    <tr><td><label for="params_ap">xa,xp,ya,yp</label></td>
-    <td><input name="params_ap" id="params_ap" type="text" size="15" value="0.15,0.1,1.57,1.57"></td></tr>
-    <tr><td><label for="params_r">ra,rp</label></td>
-    <td><input name="params_r" id="params_r" type="text" size="15" value=".5,0.25"></td></tr>
-
-    <tr><td class="header" colspan="2">Controls</td></tr>
-    <tr><td colspan="2">
-      <div class="bdiv">
-        <button class="bc" id="Clear" name="Clear">Clear</button>
+    <table id="palette" width="220" border="1">
+      <tr><td colspan="4" class="header">Gesture [x,y,ro,ra]</td></tr>
+      <tr><td colspan="4"><input name="gesture" id="gesture" type="text" value="0.8,0.2,0.4,0.25" /></td></tr>
+      <tr><td class="header" colspan="4">Controls</td></tr>
+      <tr><td colspan="4"><div class="bdiv">
+        <button class="bc" id="Jiggle" name="Jiggle">Jiggle</button>
         <button class="bc" id="Start" name="Start">Start</button><br/>
         <button class="bc" id="Pen" name="Pen">&nbsp;Pen&nbsp;</button>
-        <button class="bc" id="Stop" name="More">Stop&nbsp;</button><br/>
-        <button class="bc" id="Move" name="Move">Move&nbsp;</button><br/>
-    </div>
-  </td></tr>
-  </table>
+        <button class="bc" id="Stop" name="Stop">Stop&nbsp;</button><br/>
+        <!--        <button class="bc" id="Move"
+        name="Move">Move&nbsp;</button> -->
+        
+      </div></td></tr>
+      <tr><td class="header" colspan="4">Colors</td></tr>
+      <tr><td class="pc">&nbsp;</td><td class="pc">&nbsp;</td><td class="pc">&nbsp;</td><td class="pc">&nbsp;</td></tr>
+      <tr><td class="pc">&nbsp;</td><td class="pc">&nbsp;</td><td class="pc">&nbsp;</td><td class="pc">&nbsp;</td></tr>
+      <tr><td class="pc">&nbsp;</td><td class="pc">&nbsp;</td><td class="pc">&nbsp;</td><td class="pc">&nbsp;</td></tr>
+      <tr><td class="pc">&nbsp;</td><td class="pc">&nbsp;</td><td class="pc">&nbsp;</td><td class="pc">&nbsp;</td></tr>
+    </table>
+
   </form>
 </div>
 

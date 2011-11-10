@@ -26,7 +26,7 @@ var Renderer = function(visCanvas, hidCanvas, cfg) {
     this.xoff = 0;
     this.yoff = 0;
     this.error = null;
-    this.stepCount = 8;
+    this.stepCount = 32;
     this.isDrawing = false;
     this.wantClear = false;
     this.aframe = false;
@@ -147,7 +147,7 @@ Renderer.prototype._updateColor = function() {
 Renderer.prototype._updateStepCount = function() {
     /* update step count for incremental speedup */
     if(this.count % 60 === 0) {
-        if(this.stepCount < 64) {
+        if(this.stepCount < 100) {
             this.stepCount += 2;
         }
     }
@@ -283,13 +283,28 @@ CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
 // center-of-mass vs the geometric center, ranging from [1.5 -
 // 2]*avg(px, py)
 
+
+var cons = [1/16, 11/3072, 173/737280, 22931/1321205760];
+var adjustPeriod = function(lg, ampl, t) {
+    // original period = 2*PI*sqrt(L/g)
+    if(t) lg = Math.pow(t/(Math.PI*2),2);
+    var adjustment = 1 + cons[0]*Math.pow(ampl,2) + cons[1]*Math.pow(ampl,4) + cons[2]*Math.pow(ampl,6) + cons[3]*Math.pow(ampl,8);
+    var adjusted = Math.PI*2*Math.sqrt(lg*adjustment);
+    return adjusted;
+};
+var adjustFreq = function(ampl, f) {
+    var adj = 1/adjustPeriod(null, ampl, 1/f);
+    // make the adjustment much much smaller(!)
+    adj = f - 0.005*(f - adj);
+    console.log("Freqs: " + f + " -> " + adj);
+    return adj;
+}
+
 // length=l, width=w, height=h of table in meters
 // x,y --> coords of weights on a [0,1] scale (x is along l, y is along w)
 // amplitudes and phases of swing are in radians
 // phase of rotation is in radians
 var tableConfig = function(l, w, h, x, y, xa, xp, ya, yp, ra, rp) {
-    var cons = [1/16, 11/3072, 173/737280, 22931/1321205760];
-
     var xz = Math.sqrt(Math.pow(Math.abs(l/2 - l*x),2) + Math.pow(w*y,2));
     var yz = Math.sqrt(Math.pow(Math.abs(w/2 - w*y),2) + Math.pow(l*x,2));
     var xr = Math.sqrt(Math.pow(Math.abs(l/2 - l*x),2) + Math.pow(Math.abs(w/2 - w*y),2));
@@ -298,11 +313,8 @@ var tableConfig = function(l, w, h, x, y, xa, xp, ya, yp, ra, rp) {
     var xl = Math.sqrt(Math.pow(xz,2) + Math.pow(h,2));
     var yl = Math.sqrt(Math.pow(yz,2) + Math.pow(h,2));
 
-    var sx = 1 + cons[0]*Math.pow(xa,2) + cons[1]*Math.pow(xa,4) + cons[2]*Math.pow(xa,6) + cons[3]*Math.pow(xa,8);
-    var xf = 1/(2*Math.PI*Math.sqrt(sx*xl/9.81));
-
-    var sy = 1 + cons[0]*Math.pow(ya,2) + cons[1]*Math.pow(ya,4) + cons[2]*Math.pow(ya,6) + cons[3]*Math.pow(ya,8);
-    var yf = 1/(2*Math.PI*Math.sqrt(sy*yl/9.81));
+    var xf = 1/adjustPeriod(xl/9.81,xa);
+    var yf = 1/adjustPeriod(yl/9.81,ya);
     var rf = (1.5 + xd/2) * (xf+yf)/2;
 
     var cfg = {
@@ -341,7 +353,39 @@ var spiroConfig = function(l, k) {
     return cfg;
 };
 
+
+/*
+ * The gesture is assumed to be an arc-ish line measured in a (0,0) to
+ * (1,1) coord space, with the max deviation from a straight line g0
+ * and the linear offset of that point along the line as g1.
+ * x1 - x0 -> convert to rads, use as xampl
+ * y1 - y0 -> convert to rads, use as yampl
+ * g0 -> convert to rads, use as both x and y rotational param ampl
+ * g1 -> convert to rads, use as the xy phase difference 
+ * total y distance -> yampl
+*/
+var gestureConfig = function(d,freqs, vals) {
+    var vrads = _.map(vals, function(v) { return 2*Math.PI*v; });
+    var vfreq = freqs;
+    vfreq[1] = adjustFreq(vrads[0],vfreq[1]);
+
+    var cfg = {
+        mode: HARM,
+        step: .01,
+        xterms: [
+            { frequency: vfreq[0], damping: d, phase: 0, amplitude: vrads[0] },
+            { frequency: vfreq[1], damping: d, phase: 0, amplitude: vrads[2] },
+        ],
+        yterms: [
+            { frequency: vfreq[2], damping: d, phase: vrads[3], amplitude: vrads[1] },
+            { frequency: vfreq[3], damping: d, phase: vrads[3], amplitude: vrads[2] },
+        ],
+    };
+    return cfg;
+};
+
 exports.Renderer = Renderer;
 exports.tableConfig = tableConfig;
 exports.spiroConfig = spiroConfig;
+exports.gestureConfig = gestureConfig;
 
