@@ -73,6 +73,13 @@ var makeConfig = function() {
    }
  };
 
+  document.getElementById('hdraw').onclick = function() {
+    if(renderer) {
+      var i = Math.floor(Math.random()*palette.length);
+      renderer.setColor(palette[i]);
+    }
+  }
+
   document.getElementById('Jiggle').onclick = function() {
     freqs = _.map(freqs, function() {
       return Math.ceil(Math.random()*5);
