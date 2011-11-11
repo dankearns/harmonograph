@@ -29,10 +29,12 @@ button {
     color: #ffffff;
 }
 .toggle {
-    background-color: #000000;
+    background-color: #ffee66;
     color: #ffee66;
     position: absolute;
     right: 0px;
+    width: 13px;
+    height: 13px;
 }
 .draw {
     width: 100%;

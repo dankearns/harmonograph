@@ -24,8 +24,8 @@ window.onload = function() {
   var df = function() {
     draw.width = window.innerWidth;
     draw.height = window.innerHeight;
-    blit.width = window.innerWidth*.95;
-    blit.height = window.innerHeight*.95;
+    blit.width = window.innerWidth*.98;
+    blit.height = window.innerHeight*.98;
   }
 
 
@@ -121,7 +121,7 @@ var makeConfig = function() {
 setupPalette(palette);  
 
   var hidden = false;
-  var hide = document.getElementById('ctrls');
+  var hide = document.getElementById('palette');
   document.getElementById('hide').onclick = function() {
     if(hidden)
       hide.style.visibility = 'visible';
@@ -168,7 +168,7 @@ setupPalette(palette);
 <body>
 
 <div id="controls">
-  <span class="toggle" id="hide">X</span>
+  <span class="toggle" id="hide">&nbsp;</span>
   <form onSubmit="return false;">
 
     <table id="palette" width="160" border="0">
