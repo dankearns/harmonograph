@@ -136,7 +136,6 @@ setupPalette(palette);
  sbutton.onclick = function() {
     var clear = !overbutton.checked;
     if(sstoggle) {
-      sbutton.innerHTML = "Stop";
       var cfg = makeConfig();
 
       if(renderer == null) {
@@ -155,9 +154,9 @@ setupPalette(palette);
         }
       }
     } else {
-      sbutton.innerHTML = "Start&nbsp;";
       renderer.pause(false);
     }
+    sbutton.innerHTML = sstoggle ? "Stop&nbsp;" : "Start";
     sstoggle = !sstoggle;
  };
 
@@ -177,8 +176,8 @@ setupPalette(palette);
     </td></tr>
 
     <tr>
-      <td colspan="3">Add layer</td>
-      <td><input name="over" id="over" type="checkbox" checked="false" /></td>
+      <td colspan="4">Add layer
+      <input name="over" id="over" type="checkbox" checked="false" /></td>
    </tr>
 
      <tr><td class="pc">&nbsp;</td><td class="pc">&nbsp;</td><td class="pc">&nbsp;</td><td class="pc">&nbsp;</td></tr>
