@@ -1,6 +1,0 @@
-Quick and Dirty 2-Axis, 4-Pendulum harmonograph html5 canvas drawing app.
-
-Usage:
-  node server.js
-  hit localhost:8000
-  click on stuff!
