@@ -232,7 +232,8 @@ Renderer.prototype._init = function() {
 
     d.lineWidth = lwidth;
     d.beginPath();
-    d.moveTo(this._scale(this.graph.increment()));
+    var pos = this._scale(this.graph.increment());
+    d.moveTo(pos[0],pos[1]);
 };
 
 Renderer.prototype._transform = function() {
