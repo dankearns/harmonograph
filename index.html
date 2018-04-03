@@ -2,7 +2,7 @@
 <html> <head>
 <title>Harmonograph Unleashed</title>
 <link rel="stylesheet" href="hstyle.css" type="text/css"/>
-<script type="text/javascript" src="/bundle.js"></script>
+<script type="text/javascript" src="bundle.js"></script>
 <script>
 
 var ren = require('rendr');
@@ -82,12 +82,7 @@ var makeConfig = function() {
 
   document.getElementById('Jiggle').onclick = function() {
     freqs = _.map(freqs, function() {
-      var v1 = Math.random()*18;
-      var v2 = Math.random()*18;
-      var v3 = Math.random()*18;
-      var v4 = Math.random()*18;
-      var v5 = Math.random()*18;
-      return Math.ceil((v1+v2+v3+v4+v5)/5);
+      return Math.ceil(Math.random()*5);
     });
     prev = null;
     var g = document.getElementById('gesture');
