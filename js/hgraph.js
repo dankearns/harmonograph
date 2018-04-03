@@ -5,11 +5,11 @@ var _ = require('underscore');
  * x(t) = Asin(tf + p)e^-dt
  *
  * superposed 2-axis 2-pendulum motion:
- * x(t) =a1sin(tf1 + p1)e^-d1t + a2sint(f2 + p2)e^-d2t
- * y(t) =a3sin(tf3 + p3)e^-d3t + a4sint(f4 + p4)e^-d4t
+ * x(t) =a1sin(tf1 + p1)e^-d1t + a2sin(tf2 + p2)e^-d2t
+ * y(t) =a3sin(tf3 + p3)e^-d3t + a4sin(tf4 + p4)e^-d4t
  *
  * In a real physical harmonograph:
- *   the frequencies will be almopst equal, since the strings are the same length
+ *   the frequencies will be almost equal, since the strings are the same length
  *     but, the slight differences really matter to the image!
  *   the second X term would be the rotational procession term
  *   there would be no second y term

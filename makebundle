@@ -1,0 +1,1 @@
+  browserify -r underscore -r ./js/hgraph.js:hgraph -r ./js/rendr.js:rendr -r ./js/renderer.js:renderer > bundle.js

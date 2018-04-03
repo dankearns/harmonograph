@@ -234,6 +234,7 @@ Renderer.prototype._init = function() {
     d.beginPath();
     var pos = this._scale(this.graph.increment());
     d.moveTo(pos[0],pos[1]);
+    d.globalAlpha=0.75;
 };
 
 Renderer.prototype._transform = function() {

@@ -2,12 +2,12 @@
 <html> <head>
 <title>Harmonograph Unleashed</title>
 <link rel="stylesheet" href="hstyle.css" type="text/css"/>
-<script type="text/javascript" src="/lib.js"></script>
+<script type="text/javascript" src="/bundle.js"></script>
 <script>
 
-var ren = require('./rendr');
-var _ = require('underscore');
+var ren = require('rendr');
 var Renderer = ren.Renderer;
+var _ = require('underscore');
 
 window.onload = function() {
   window.requestAnimFrame = (function() {
@@ -24,8 +24,8 @@ window.onload = function() {
   var df = function() {
     draw.width = window.innerWidth;
     draw.height = window.innerHeight;
-    blit.width = window.innerWidth*.98;
-    blit.height = window.innerHeight*.98;
+    blit.width = window.innerWidth*.99;
+    blit.height = window.innerHeight*.99;
   }
 
 
@@ -82,18 +82,26 @@ var makeConfig = function() {
 
   document.getElementById('Jiggle').onclick = function() {
     freqs = _.map(freqs, function() {
-      return Math.ceil(Math.random()*5);
+      var v1 = Math.random()*18;
+      var v2 = Math.random()*18;
+      var v3 = Math.random()*18;
+      var v4 = Math.random()*18;
+      var v5 = Math.random()*18;
+      return Math.ceil((v1+v2+v3+v4+v5)/5);
     });
     prev = null;
+    var g = document.getElementById('gesture');
+    g.value = freqs.join(","); 
     console.log(freqs);
   }
 
-  var palette = [
-    '#b2ae6d','#594c6c','#f9994b','#ed563d','#9f5843','#de9b5d',
-    '#f4c27e', '#8ca360','#edaca8','#ec867f','#c95c44','#d67e78',
-    '#bfb48d','#9c4223','#e96556','#727548'
+  var palettelist = [
+    /* intense */ ["#d20163", "#70dd71", "#aa40f2", "#00d8af", "#48009d", "#da8700", "#bc00ac", "#675d00", "#e084ff", "#102c04", "#e60031", "#00aab7", "#ff64a1", "#2f1164", "#e8c085", "#47141d"],
+  /* earthtones */ [ '#b2ae6d','#594c6c','#f9994b','#ed563d','#9f5843','#de9b5d', '#f4c27e', '#8ca360','#edaca8','#ec867f','#c95c44','#d67e78', '#bfb48d','#9c4223','#e96556','#727548' ],
+  /* bright */ ["#3a69f9", "#7aee21", "#fe28df", "#00ba38", "#fe009b", "#01bf66", "#dd81ff", "#f5ed00", "#d7365d", "#93ffaf", "#c45207", "#76d189", "#ff7f96", "#ffeb7f", "#fe9c00", "#de9652"]
   ];
 
+  var palette = palettelist[Math.floor(Math.random()*palettelist.length)];
   var draw = document.getElementById('hdraw');
   var blit= document.getElementById('hblit');
   df();

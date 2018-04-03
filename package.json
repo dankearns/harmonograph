@@ -1,0 +1,25 @@
+{
+  "name": "harmonograph",
+  "version": "1.0.0",
+  "description": "You have probably seen physical versions of these in children's science museums, like [these](http://www.discoverymuseums.org/hands-exhibits/science-discovery-museum \"Science Discovery Museum\") [ones](http://www.exploratorium.edu/ \"Exploratorium\").",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dankearns/harmonograph.git"
+  },
+  "author": "Dan Kearns",
+  "license": "BSD-2-Clause",
+  "bugs": {
+    "url": "https://github.com/dankearns/harmonograph/issues"
+  },
+  "homepage": "https://github.com/dankearns/harmonograph#readme",
+  "dependencies": {
+    "connect": "^3.6.6",
+    "serve-static": "^1.13.2",
+    "underscore": "^1.8.3"
+  }
+}
