@@ -1,4 +1,4 @@
-#Canvas Harmonograph
+# Canvas Harmonograph
 
 You have probably seen physical versions of these in children's science museums,
 like [these](http://www.discoverymuseums.org/hands-exhibits/science-discovery-museum "Science Discovery Museum") [ones](http://www.exploratorium.edu/ "Exploratorium"). 
@@ -8,13 +8,13 @@ implementation using html5 canvas.
 
 You can also [play with it live](http://demo.thekearns.org)
 
-##Usage:
+## Usage:
 
   node server.js
   hit localhost:8000
   Click on stuff!
 
-##Screenshots!
+## Screenshots!
 
 ![Screenshot 1](img/hg_1_thumb.png "Screenshot 1")
 ![Screenshot 2](img/hg_2_thumb.png "Screenshot 2")
